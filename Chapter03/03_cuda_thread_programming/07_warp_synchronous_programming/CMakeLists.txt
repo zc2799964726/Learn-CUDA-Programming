@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.18)
+
+project(warp_synchronous_programming LANGUAGES CUDA CXX)
+
+if (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.0)
+    set(CMAKE_CUDA_ARCHITECTURES 52;60;61;70;75;80)
+else()
+    set(CMAKE_CUDA_ARCHITECTURES 35;37;50;52;60;61;70;75)
+endif()
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+if(DEFINED ENV{CUDA_PATH})
+    set(CUDA_PATH $ENV{CUDA_PATH})
+    if(EXISTS "${CUDA_PATH}/samples/common/inc")
+        set(SAMPLES_COMMON_INC "${CUDA_PATH}/samples/common/inc")
+    endif()
+endif()
+get_filename_component(SUBDIR_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+macro(add_cuda_exe tgt srcs)
+    set(pref_tgt ${SUBDIR_NAME}_${tgt})
+    add_executable(${pref_tgt} ${srcs})
+    target_include_directories(${pref_tgt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    if(SAMPLES_COMMON_INC)
+        target_include_directories(${pref_tgt} PRIVATE ${SAMPLES_COMMON_INC})
+    endif()
+    target_compile_options(${pref_tgt} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-m64 -lineinfo -rdc=true>)
+    target_compile_options(${pref_tgt} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-g -fopenmp>)
+    target_link_libraries(${pref_tgt} PRIVATE -lgomp)
+endmacro()
+
+add_cuda_exe(reduction_wp "reduction.cpp;reduction_wp_kernel.cu")
